@@ -701,11 +701,4 @@ mod tests {
         assert!(!visual.has_layout());
         assert!(visual.has_visuals());
     }
-
-    // Ratatui integration
-    #[test]
-    #[cfg(feature = "ratatui")]
-    fn convert_to_ratatui() {
-        assert!(true)
-    }
 }
