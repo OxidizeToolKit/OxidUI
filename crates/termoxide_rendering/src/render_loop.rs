@@ -184,11 +184,13 @@ impl<B: Backend> RenderLoop<B> {
     /// Returns [`RenderLoopError`] on I/O failure or on a crossterm event
     /// reading error.
     pub fn run<A: App>(&mut self, app: &mut A) -> Result<(), RenderLoopError> {
-        let result = self.loop_body(app);
-
-        // Restore terminal unconditionally.
-        self.renderer.restore()?;
-        result
+        let loop_result = self.loop_body(app);
+        let restore_result = self.renderer.restore();
+        match (loop_result, restore_result) {
+            (Err(e), _) => Err(e),
+            (Ok(()), Err(e)) => Err(e.into()),
+            (Ok(()), Ok(())) => Ok(()),
+        }
     }
 
     // ── Inner loop ─────────────────────────────────────────────────────────── //
