@@ -25,14 +25,14 @@ long_description = "OxidUi is a framework for building terminal user interfaces 
 
 [workspace]
 members = [
-    "crates/oxidui_style",
+    "crates/termoxide_style",
     "crates/termoxide_macros",
     "crates/termoxide_reactive",
 ]
 
 [dependencies]
 termoxide_macros = { path = "crates/termoxide_macros" }
-oxidui_style = { path = "crates/oxidui_style", default-features = true }
+termoxide_style = { path = "crates/termoxide_style", default-features = true }
 termoxide_reactive = { path = "crates/termoxide_reactive" }
 
 # Path handling
@@ -48,7 +48,7 @@ enum_cycling = "0.2.1"
 
 [features]
 default = ["ratatui"]
-ratatui = ["oxidui_style/ratatui"]
+ratatui = ["termoxide_style/ratatui"]
 
 [profile.release]
 opt-level = 3
