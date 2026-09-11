@@ -45,10 +45,9 @@
 //! }
 //!
 //! // Stop the reader thread and restore the terminal, surfacing any error the
-//! // reader loop stopped on.
-//! match events.teardown().expect("reader thread panicked") {
-//!     Ok(()) => {},
-//!     Err(error) => eprintln!("reader stopped: {error}"),
+//! // reader stopped on (including a panic of the reader thread).
+//! if let Err(error) = events.teardown() {
+//!     eprintln!("reader stopped: {error}");
 //! }
 //! ```
 
@@ -129,26 +128,31 @@ impl EventStream {
     ///
     /// Consumes the handle, signals shutdown, and joins the thread — the same
     /// work the [`Drop`] implementation performs, except the result is returned
-    /// rather than ignored. The outer [`thread::Result`] is `Err` only if the
-    /// reader thread panicked; the inner `Result` carries the [`Error`] the
-    /// reader loop stopped on, if any.
-    pub fn teardown(mut self) -> thread::Result<Result<()>> { self.stop() }
+    /// rather than ignored.
+    ///
+    /// # Errors
+    ///
+    /// - [`Error::Terminal`] if a terminal operation failed while reading input or restoring the terminal.
+    /// - [`Error::Channel`] if the reader could no longer deliver events.
+    /// - [`Error::ReaderPanicked`] if the reader thread panicked.
+    pub fn teardown(mut self) -> Result<()> { self.stop() }
 
     /// Signal the reader thread to stop and join it, at most once.
     ///
     /// Both the shutdown sender and the join handle are taken out of their
     /// `Option` slots, so repeated calls (for instance
     /// [`teardown`](Self::teardown) followed by [`Drop`]) are safe no-ops that
-    /// return `Ok(Ok(()))`. Sending the shutdown signal is best-effort: if the
+    /// return `Ok(())`. Sending the shutdown signal is best-effort: if the
     /// thread has already exited the send simply fails and is ignored. On the
-    /// first call the reader thread's own result is forwarded unchanged.
-    fn stop(&mut self) -> thread::Result<Result<()>> {
+    /// first call the reader thread's own result is forwarded unchanged, and a
+    /// panic of the thread becomes an [`Error::ReaderPanicked`].
+    fn stop(&mut self) -> Result<()> {
         if let Some(shutdown) = self.shutdown.take() {
             let _ = shutdown.send(());
         }
         match self.thread.take() {
-            Some(thread) => thread.join(),
-            None => Ok(Ok(())),
+            Some(thread) => thread.join().map_err(Error::from_panic)?,
+            None => Ok(()),
         }
     }
 }
